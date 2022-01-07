@@ -8,6 +8,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\DateType;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Entity\Film;
 
 class ApiController extends AbstractController
@@ -40,6 +42,7 @@ class ApiController extends AbstractController
     public function create(Request $request)
     {
             $film = new Film();
+            
             $form = $this->createFormBuilder($film)
             ->add('Nom', TextType::class)
             ->add('Synopsis', TextType::class)
@@ -51,11 +54,15 @@ class ApiController extends AbstractController
 
             $form->handleRequest($request);
             if ($form->isSubmitted() && $form->isValid()) {
+                $film->setDateCreation(new \DateTime());
                 $film = $form->getData();
                 $em = $this->getDoctrine()->getManager();
                 $em->persist($film);
                 $em->flush();
-                echo 'Envoyé';
+              
+                return new Response("Created", 201);
+            }if ($form->isSubmitted() && !$form->isValid()){
+                return new Response("problem", 204);
             }
             return $this->render('api/create.html.twig', [
                 'form' => $form->createView(),
@@ -70,28 +77,49 @@ class ApiController extends AbstractController
     {
         $films = $this->getDoctrine()->getRepository(Film::class);
         $films = $films->findAll();
-        return $this->render(
+     /*   return $this->render(
             'api/getall.html.twig',
-            array('films' => $films)
+             array('films' => $films),
         );
+        */
+        $data = [];
+
+        foreach ($films as $film){
+            $data[] = [
+                'id' => $film->getId(),
+                'nom' => $film->getNom(),
+                'type' => $film->getType(),
+                'date' => $film->getDateCreation()
+            ];
+        }
+
+         return new JsonResponse($data, Response::HTTP_OK);
     }
 
  /**
      * @Route("/api/getone/{id}", name="getone")
      */
   
-        public function getone($id) {
+        public function getone($id) : JsonResponse {
             $film = $this->getDoctrine()->getRepository(Film::class);
             $film = $film->find($id);
             if (!$film) {
-                throw $this->createNotFoundException(
-                    'Aucun film pour l\'id: ' . $id
-                );
+                return new Response("Page Does not exist", 404);
             }
-            return $this->render(
+        /*    return $this->render(
                 'api/getone.html.twig',
                 array('film' => $film)
-            );
+            ); */
+            $data = [
+                'id' => $film->getId(),
+                'nom' => $film->getNom(),
+                'type' => $film->getType(),
+                'date' => $film->getDateCreation()
+              
+            ];
+
+            return new JsonResponse($data, Response::HTTP_OK);
+
         }
 
 
